@@ -1,14 +1,14 @@
 class Ship:
-    def __init__ (self, name: str, length: int):
+    def __init__(self, name: str):
         self.name = name
-        self.length = length
-        self.is_sunk = False
-        self.coordinates = []
-        self.coordinates_shot = []
+        self.coordinates: List[Tuple[int,int]] = []
+        self.hits: Set[Tuple[int,int]] = set()
+        self.is_sunk: bool = False
 
-    def set_coordinates(self, coordinates: list):
-        self.coordinates = coordinates
-    
-    def got_hit(self, coordinate: str):
-        self.coordinates_shot.append(coordinate)
-        # tbd determine if the ship is sunk
+   def register_hit(self, coordinate: Tuple[int,int]):
+        # add shot to the hits set
+        self.hits.add(coordinate)
+
+        # check ship's sunk status
+        if self.coordinates == self.hits:
+            self.is_sunk = True
