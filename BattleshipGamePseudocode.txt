@@ -1,0 +1,60 @@
+# Description: Simulates a 2-player battleship game (human vs. bot) using brute-force pattern matching. 
+# Input: User ship placements and shots; Bot uses random positions
+# Output: Game result - winner announcement after all ships sunk
+
+
+# Initialize game
+create 2 players: human, bot
+create 2 boards (10x10)
+assign 3 ships each: crusier, submarine, destroyer
+set active_player = human
+
+# Ship placement - human
+for each ship in human_ships:
+    repeat:
+        prompt placement input
+        if placement valid:
+            place ship
+            break
+        else:
+            show error
+
+# Ship placement - bot
+for each ship in bot_ships:
+    repeat:
+        generate random placement
+        if placement valid:
+            place ship
+            break
+
+# Game loop
+while not all ships sunk:
+    if active_player == human:
+        repeat:
+            prompt for shot (row, col)
+            if already shot or out of bounds:
+                show error
+                continue
+            result = shoot bot_board
+            if result == "hit":
+                show "Hit"
+                if all bot ships sunk:
+                    reutrn "Human wins"
+                continue
+            else if result == "miss":
+                show "Miss"
+                active_player = bot
+                break
+    else:
+        repeat:
+            pick random untried cell
+            result = shoot human_board
+            if result == "hit":
+                show "Bot hit"
+                if all human ships sunk:
+                    return "Bot wins"
+                continue
+            else:
+                show "Bot missed"
+                active_player = human
+                break
