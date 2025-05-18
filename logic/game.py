@@ -1,58 +1,121 @@
 from .board import Board
-from .player import Player
-from .ship import Ship
+from .ship import SHIPS, ORIENTATION
+import random
 
 class Game:
-    def __init__(self):
-        ships = [
-            Ship(name="cruiser"),
-            Ship(name="submarine"),
-            Ship(name="destroyer")
+    def __init__(self, size=10):
+        # setup boards
+        self.player_board = Board(size)
+        self.bot_board = Board(size)
+        self.bot_board.randomly_place_ships()
+
+        # setup game state
+        self.size = size
+        self.state = 'placing'
+        self.ship_index = 0
+        self.ship_orientation = SHIPS[0][2][0]
+        self.player_turn = True
+        self.bot_targets = []
+
+    def player_place_ship(self, row, col, orientation):
+        name, length, directions = SHIPS[self.ship_index]
+
+        # exit if not a valid orientation
+        if orientation not in directions:
+            return False
+
+        # place the ship on the player's board
+        placed_ship = self.player_board.place_ship(row, col, orientation, length)
+
+        # exit if not successfully placed
+        if not placed_ship:
+            return False
+
+        self.ship_index += 1
+
+        if self.ship_index == len(SHIPS):
+            self.state = 'playing'
+        else:
+            self.ship_orientation = SHIPS[self.ship_index][2][0]
+
+        # Successfully placed the ship
+        return True
+
+    def player_shot(self, row, col):
+        shot = self.bot_board.handle_shot(row, col)
+
+        if shot is None:
+            return None
+        if shot:
+            if self.bot_board.check_ships():
+                return 'win'
+            return 'hit'
+        else:
+            self.player_turn = False
+            return 'miss'
+
+    def bot_shot(self):
+
+        potential_shots = [
+            (r,c)
+            for r in range(self.size)
+            for c in range(self.size)
+            if self.player_board.grid[r][c] in (Board.EMPTY, Board.SHIP)
         ]
 
-        self.player_one: Player = Player(name="Player", ships=ships.copy())
-        self.player_two: Player = Player(name="Bot", is_bot=True, ships=ships.copy())
-        self.active_player: Player = self.player_one
-        self.game_state: str = "place_ships"
-        self.player_one_state: str = "placing"
-        self.player_two_state: str = "placing"
-
-        self.boards: Dict[Player, Board] = {
-            self.player_one: Board(),
-            self.player_two: Board()
-        }
-
-        self.available_shots: List[Tuple[int,int]] = [(row, col) for row in range(Board.size) for col in range(Board.size)]]
-
-    def place_ship(self, player: Player, ship: Ship):
-        # Call the board's place_ship method
-        self.boards[player].place_ship(ship)
-
-        # check if all the ships are placed for each player
-        if len(self.boards[player].ships) == 3:
-            if player == self.player_one:
-                self.player_one_state = "placed"
+        while True:
+            # Aim for a target if available
+            if self.bot_targets:
+                r, c = self.bot_targets.pop(0)
+            # Otherwise, select a random shot
             else:
-                self.player_two_state = "placed"
+                # randomly select
+                r, c = random.choice(potential_shots)
+            
+            shot_result = self.player_board.handle_shot(r,c)
         
-        # update game state if both players have placed their ships
-        if self.player_one_state == "placed" and self.player_two_state == "placed":
-            self.game_state = "battle"
+            # already shot, try again
+            if shot_result is None:
+                continue
 
-    def shoot(self, player: Player, row: int, col: int) -> str:
+            # if hit, record neighbors for strategic targeting
+            if shot_result:
+                for dr, dc in ORIENTATION.values():
+                    neighbor_row = r + dr
+                    neighbor_col = c + dc
+
+                    # validate the neighbors
+                    valid, _ = self.player_board.is_cell_valid(neighbor_row, neighbor_col)
+                    if valid and (neighbor_row, neighbor_col) not in self.bot_targets:
+                        self.bot_targets.append((neighbor_row, neighbor_col))
+
+                # Check if all player's ships have been sunk
+                if self.player_board.check_ships():
+                    return 'lose'
+
+                # Bot gets another turn after a hit
+                return 'hit'
+            
+            # miss, switch turns
+            else:
+                self.player_turn = True
+                return 'miss'
+                
+
+                for row in range(self.size):
+                    for col in range(self.size):
+                        cell = self.player_board.grid[row][col]
+                        if cell == Board.EMPTY or cell == Board.SHIP:
+                            potential_shots.append((row, col))
+
+                # randomly select and fire a shot
+                r, c = random.choice(potential_shots)
+                shot_result = self.player_board.handle_shot(r,c)
+
+
+                
+                
+                    
+
+
         
-        # assign roles when shooting
-        shootee = self.player_two if player == self.player_one else self.player_one
-        result = self.boards[shootee].shoot(row, col)
-
-        # remove the shot from available shots for the bot
-        if player.is_bot:
-            self.available_shots.remove((row, col))
-
-        if result == "miss":
-            self.active_player = shootee
-        elif result == "hit" and self.boards[shootee].are_all_sunk():
-            return "win"
-        
-        # "hit", "miss", or "already_shot"
-        return result

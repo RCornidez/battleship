@@ -1,14 +1,12 @@
-class Ship:
-    def __init__(self, name: str):
-        self.name = name
-        self.coordinates: List[Tuple[int,int]] = []
-        self.hits: Set[Tuple[int,int]] = set()
-        self.is_sunk: bool = False
+ORIENTATION = {
+    'hl': (0, -1), 'hr': (0, 1),
+    'vu': (-1, 0), 'vd': (1, 0),
+    'dlu': (-1, -1), 'dld': (1, -1),
+    'dru': (-1, 1),  'drd': (1, 1)
+}
 
-   def register_hit(self, coordinate: Tuple[int,int]):
-        # add shot to the hits set
-        self.hits.add(coordinate)
-
-        # check ship's sunk status
-        if self.coordinates == self.hits:
-            self.is_sunk = True
+SHIPS = [
+    ('destroyer', 2, ['hl', 'hr', 'vu', 'vd']),
+    ('submarine', 3, ['dlu', 'dld', 'dru', 'drd']),
+    ('cruiser',   3, ['hl', 'hr', 'vu', 'vd'])
+]
